@@ -24,12 +24,11 @@ public class RecommendationRuleSetForInvest500 implements RecommendationRuleSet 
 
     @Override
     public Optional<BankProduct> findUserRecommendations(String id) {
-        int debitTransactionAmount = bankManagerRepository.getDebitTransactionAmount(id);
-        int investTransactionAmount = bankManagerRepository.getInvestTransactionAmount(id);
-        int sumDepositSavingTransaction = bankManagerRepository.getSumDepositSavingTransaction(id);
-        if (debitTransactionAmount != 0
-                && investTransactionAmount == 0
-                && sumDepositSavingTransaction > 1000) {
+        boolean isFirstRule = bankManagerRepository.isUserOf(id, "DEBIT");
+        boolean isSecondRule = !bankManagerRepository.isUserOf(id, "INVEST");
+        boolean isThirdRule = bankManagerRepository.transactionSumCompare(id, "SAVING",
+                "DEPOSIT", ">", 1000);
+        if (isFirstRule && isSecondRule && isThirdRule) {
             return Optional.of(new BankProduct(productName, productId, productDescription));
         }
         return Optional.empty();

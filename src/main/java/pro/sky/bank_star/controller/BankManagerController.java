@@ -19,7 +19,7 @@ public class BankManagerController {
 
     @GetMapping("/recommendation/{user_id}")
     public ResponseEntity<Map<String, List<BankProduct>>> getListProductsBank(@PathVariable(value = "user_id")
-                                                                                  String id) {
+                                                                              String id) {
         return ResponseEntity.ok(bankManagerService.getListProductsBank(id));
     }
 }

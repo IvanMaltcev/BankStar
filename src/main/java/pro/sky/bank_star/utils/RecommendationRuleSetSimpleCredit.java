@@ -28,12 +28,12 @@ public class RecommendationRuleSetSimpleCredit implements RecommendationRuleSet 
 
     @Override
     public Optional<BankProduct> findUserRecommendations(String id) {
-        int creditTransactionAmount = bankManagerRepository.getCreditTransactionAmount(id);
-        int sumDepositDebitTransaction = bankManagerRepository.getSumDepositDebitTransaction(id);
-        int sumWithdrawDebitTransaction = bankManagerRepository.getSumWithdrawDebitTransaction(id);
-        if (creditTransactionAmount == 0
-                && sumDepositDebitTransaction > sumWithdrawDebitTransaction
-                && sumWithdrawDebitTransaction > 100000) {
+        boolean isFirstRule = !bankManagerRepository.isUserOf(id, "CREDIT");
+        boolean isSecondRule = bankManagerRepository.transactionSumCompareDepositWithdraw(id,
+                "DEBIT", ">");
+        boolean isThirdRule = bankManagerRepository.transactionSumCompare(id, "DEBIT",
+                "WITHDRAW", ">", 100000);
+        if (isFirstRule && isSecondRule && isThirdRule) {
             return Optional.of(new BankProduct(productName, productId, productDescription));
         }
         return Optional.empty();

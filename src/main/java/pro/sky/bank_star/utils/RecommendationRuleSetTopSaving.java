@@ -29,13 +29,14 @@ public class RecommendationRuleSetTopSaving implements RecommendationRuleSet {
 
     @Override
     public Optional<BankProduct> findUserRecommendations(String id) {
-        int debitTransactionAmount = bankManagerRepository.getDebitTransactionAmount(id);
-        int sumDepositSavingTransaction = bankManagerRepository.getSumDepositSavingTransaction(id);
-        int sumDepositDebitTransaction = bankManagerRepository.getSumDepositDebitTransaction(id);
-        int sumWithdrawDebitTransaction = bankManagerRepository.getSumWithdrawDebitTransaction(id);
-        if (debitTransactionAmount != 0
-                && sumDepositDebitTransaction > sumWithdrawDebitTransaction
-                && (sumDepositDebitTransaction >= 50000 || sumDepositSavingTransaction >= 50000)) {
+        boolean isFirstRule = bankManagerRepository.isUserOf(id, "DEBIT");
+        boolean isSecondRule = (bankManagerRepository.transactionSumCompare(id, "DEBIT",
+                "DEPOSIT", ">=", 50000))
+                || bankManagerRepository.transactionSumCompare(id, "SAVING",
+                "DEPOSIT", ">=", 50000);
+        boolean isThirdRule = bankManagerRepository.transactionSumCompareDepositWithdraw(id,
+                "DEBIT", ">");
+        if (isFirstRule && isSecondRule && isThirdRule) {
             return Optional.of(new BankProduct(productName, productId, productDescription));
         }
         return Optional.empty();

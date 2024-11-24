@@ -1,8 +1,10 @@
 package pro.sky.bank_star.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pro.sky.bank_star.dto.BankProduct;
 import pro.sky.bank_star.utils.RecommendationRuleSet;
+import pro.sky.bank_star.utils.RecommendationRuleSetDynamic;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +20,9 @@ public class BankManagerServiceImp implements BankManagerService {
         this.recommendationRuleSets = recommendationRuleSets;
     }
 
+    @Autowired
+    RecommendationRuleSetDynamic recommendationRuleSetDynamic;
+
     @Override
     public Map<String, List<BankProduct>> getListProductsBank(String id) {
         List<BankProduct> recommendationProducts = new ArrayList<>();
@@ -26,6 +31,10 @@ public class BankManagerServiceImp implements BankManagerService {
                 recommendationProducts.add(recommendationRuleSet
                         .findUserRecommendations(id).get());
             }
+        }
+        List<BankProduct> dynamicRecommendations = recommendationRuleSetDynamic.findUserRecommendations(id);
+        if (!dynamicRecommendations.isEmpty()) {
+            recommendationProducts.addAll(dynamicRecommendations);
         }
         return recommendationProducts.stream()
                 .collect(Collectors.groupingBy(

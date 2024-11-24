@@ -1,9 +1,13 @@
 package pro.sky.bank_star.repository;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+
+import java.util.concurrent.TimeUnit;
 
 @Repository
 public class BankManagerRepository {
@@ -15,116 +19,116 @@ public class BankManagerRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public int getDebitTransactionAmount(String id) {
-        Integer result;
+    public boolean isUserOf(String id, String type) {
+        Cache<String[], Boolean> cache = Caffeine.newBuilder()
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .maximumSize(100)
+                .build();
+        String[] key = {id, type};
         try {
-            result = jdbcTemplate.queryForObject(
+            Integer result = jdbcTemplate.queryForObject(
                     "SELECT amount " +
                             "FROM transactions t " +
                             "INNER JOIN products p " +
                             "ON t.product_id = p.id " +
                             "WHERE t.user_id = ? " +
-                            "AND p.type = \'DEBIT\' LIMIT 1",
+                            "AND p.type = ? LIMIT 1",
                     Integer.class,
-                    id);
+                    id,
+                    type);
+            cache.put(key, result != null);
         } catch (EmptyResultDataAccessException e) {
-            return 0;
+            cache.put(key, false);
         }
-        return result != null ? result : 0;
+        return cache.getIfPresent(key);
     }
 
-    public int getInvestTransactionAmount(String id) {
-        Integer result;
+    public boolean isActiveUserOf(String id, String type, int limit) {
+        Cache<String[], Boolean> cache = Caffeine.newBuilder()
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .maximumSize(100)
+                .build();
+        String[] key = {id, type, String.valueOf(limit)};
         try {
-            result = jdbcTemplate.queryForObject(
-                    "SELECT amount " +
+            Integer result = jdbcTemplate.queryForObject(
+                    "SELECT count(amount) " +
                             "FROM transactions t " +
                             "INNER JOIN products p " +
                             "ON t.product_id = p.id " +
                             "WHERE t.user_id = ? " +
-                            "AND p.type = \'INVEST\' LIMIT 1",
+                            "AND p.type = ? LIMIT 1",
                     Integer.class,
-                    id);
+                    id,
+                    type);
+            cache.put(key, result != null && result >= limit);
         } catch (EmptyResultDataAccessException e) {
-            return 0;
+            cache.put(key, false);
         }
-
-        return result != null ? result : 0;
+        return cache.getIfPresent(key);
     }
 
-    public int getSumDepositSavingTransaction(String id) {
-        Integer result;
+    public boolean transactionSumCompare(String id, String typeProduct, String typeTransactions,
+                                         String comparisonType, int number) {
+        Cache<String[], Boolean> cache = Caffeine.newBuilder()
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .maximumSize(100)
+                .build();
+        String[] key = {id, typeProduct, typeTransactions, comparisonType, String.valueOf(number)};
         try {
-            result = jdbcTemplate.queryForObject(
-                    "SELECT sum(t.amount) " +
+            Integer result = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) " +
+                            "FROM transactions t " +
+                            "INNER JOIN products p " +
+                            "ON t.product_id = p.id " +
+                            "WHERE p.type = ? " +
+                            "AND t.type = ? " +
+                            "GROUP BY t.user_id " +
+                            "HAVING t.user_id = ? " +
+                            "AND SUM(t.AMOUNT) " + comparisonType + " ? LIMIT 1",
+                    Integer.class,
+                    typeProduct,
+                    typeTransactions,
+                    id,
+                    number
+            );
+            cache.put(key, result != null);
+        } catch (EmptyResultDataAccessException e) {
+            cache.put(key, false);
+        }
+        return cache.getIfPresent(key);
+    }
+
+    public boolean transactionSumCompareDepositWithdraw(String id, String typeProduct, String comparisonType) {
+        Cache<String[], Boolean> cache = Caffeine.newBuilder()
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .maximumSize(100)
+                .build();
+        String[] key = {id, typeProduct, comparisonType};
+        try {
+            Integer result = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(" +
+                            "(SELECT " +
+                            "SUM(t.AMOUNT) " +
+                            "FROM TRANSACTIONS " +
+                            "WHERE t.type = 'DEPOSIT') " +
+                            comparisonType +
+                            " (SELECT " +
+                            "SUM(t.AMOUNT) " +
+                            "FROM TRANSACTIONS " +
+                            "WHERE t.type = 'WITHDRAW')) " +
                             "FROM transactions t " +
                             "INNER JOIN products p " +
                             "ON t.product_id = p.id " +
                             "WHERE t.user_id = ? " +
-                            "AND p.type = \'SAVING\' " +
-                            "AND t.type = \'DEPOSIT\' LIMIT 1",
+                            "AND p.type = ? LIMIT 1",
                     Integer.class,
-                    id);
+                    id,
+                    typeProduct
+            );
+            cache.put(key, result != null);
         } catch (EmptyResultDataAccessException e) {
-            return 0;
+            cache.put(key, false);
         }
-        return result != null ? result : 0;
+        return cache.getIfPresent(key);
     }
-
-    public int getSumDepositDebitTransaction(String id) {
-        Integer result;
-        try {
-            result = jdbcTemplate.queryForObject(
-                    "SELECT sum(t.amount) " +
-                            "FROM transactions t " +
-                            "INNER JOIN products p " +
-                            "ON t.product_id = p.id " +
-                            "WHERE t.user_id = ? " +
-                            "AND p.type = \'DEBIT\' " +
-                            "AND t.type = \'DEPOSIT\' LIMIT 1",
-                    Integer.class,
-                    id);
-        } catch (EmptyResultDataAccessException e) {
-            return 0;
-        }
-        return result != null ? result : 0;
-    }
-
-    public int getSumWithdrawDebitTransaction(String id) {
-        Integer result;
-        try {
-            result = jdbcTemplate.queryForObject(
-                    "SELECT sum(t.amount) " +
-                            "FROM transactions t " +
-                            "INNER JOIN products p " +
-                            "ON t.product_id = p.id " +
-                            "WHERE t.user_id = ? " +
-                            "AND p.type = \'DEBIT\' " +
-                            "AND t.type = \'WITHDRAW\' LIMIT 1",
-                    Integer.class,
-                    id);
-        } catch (EmptyResultDataAccessException e) {
-            return 0;
-        }
-        return result != null ? result : 0;
-    }
-
-    public int getCreditTransactionAmount(String id) {
-        Integer result;
-        try {
-            result = jdbcTemplate.queryForObject(
-                    "SELECT amount " +
-                            "FROM transactions t " +
-                            "INNER JOIN products p " +
-                            "ON t.product_id = p.id " +
-                            "WHERE t.user_id = ? " +
-                            "AND p.type = \'CREDIT\' LIMIT 1",
-                    Integer.class,
-                    id);
-        } catch (EmptyResultDataAccessException e) {
-            return 0;
-        }
-        return result != null ? result : 0;
-    }
-
 }
