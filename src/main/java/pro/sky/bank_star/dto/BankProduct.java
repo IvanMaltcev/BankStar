@@ -41,8 +41,8 @@ public class BankProduct {
 
     @Override
     public String toString() {
-        return "\"recommendations\": \"name\": " + name +
-                ", \"id\": " + id +
-                ", \"text\": " + description;
+        return "\n\"recommendation\":\n\"name\": " + name +
+                ", \n\"id\": " + id +
+                ", \n\"text\": " + description;
     }
 }

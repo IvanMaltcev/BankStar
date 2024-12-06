@@ -9,6 +9,7 @@ import pro.sky.bank_star.utils.RecommendationRuleSetDynamic;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,16 +22,14 @@ public class BankManagerServiceImp implements BankManagerService {
     }
 
     @Autowired
-    RecommendationRuleSetDynamic recommendationRuleSetDynamic;
+    private RecommendationRuleSetDynamic recommendationRuleSetDynamic;
 
     @Override
     public Map<String, List<BankProduct>> getListProductsBank(String id) {
         List<BankProduct> recommendationProducts = new ArrayList<>();
         for (RecommendationRuleSet recommendationRuleSet : recommendationRuleSets) {
-            if (recommendationRuleSet.findUserRecommendations(id).isPresent()) {
-                recommendationProducts.add(recommendationRuleSet
-                        .findUserRecommendations(id).get());
-            }
+            Optional<BankProduct> recommendation = recommendationRuleSet.findUserRecommendations(id);
+            recommendation.ifPresent(recommendationProducts::add);
         }
         List<BankProduct> dynamicRecommendations = recommendationRuleSetDynamic.findUserRecommendations(id);
         if (!dynamicRecommendations.isEmpty()) {
@@ -38,12 +37,11 @@ public class BankManagerServiceImp implements BankManagerService {
         }
         return recommendationProducts.stream()
                 .collect(Collectors.groupingBy(
-                        it -> "user_id:" + id,
+                        it -> id,
                         Collectors.mapping(
                                 it -> new BankProduct(it.getName(), it.getId(), it.getDescription()),
                                 Collectors.toList()
                         )
-
                 ));
     }
 }

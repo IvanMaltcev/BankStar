@@ -3,7 +3,9 @@ package pro.sky.bank_star.utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pro.sky.bank_star.dto.BankProduct;
+import pro.sky.bank_star.model.Stats;
 import pro.sky.bank_star.repository.BankManagerRepository;
+import pro.sky.bank_star.repository.StatsRepository;
 
 import java.util.Optional;
 
@@ -12,6 +14,8 @@ public class RecommendationRuleSetTopSaving implements RecommendationRuleSet {
 
     @Autowired
     private BankManagerRepository bankManagerRepository;
+    @Autowired
+    private StatsRepository statsRepository;
 
     private final String productId = "59efc529-2fff-41af-baff-90ccd7402925";
     private final String productName = "Top Saving";
@@ -29,6 +33,9 @@ public class RecommendationRuleSetTopSaving implements RecommendationRuleSet {
 
     @Override
     public Optional<BankProduct> findUserRecommendations(String id) {
+        if (statsRepository.findStatsByRuleId(productId) == null) {
+            statsRepository.save(new Stats(productId, 0));
+        }
         boolean isFirstRule = bankManagerRepository.isUserOf(id, "DEBIT");
         boolean isSecondRule = (bankManagerRepository.transactionSumCompare(id, "DEBIT",
                 "DEPOSIT", ">=", 50000))
@@ -37,6 +44,9 @@ public class RecommendationRuleSetTopSaving implements RecommendationRuleSet {
         boolean isThirdRule = bankManagerRepository.transactionSumCompareDepositWithdraw(id,
                 "DEBIT", ">");
         if (isFirstRule && isSecondRule && isThirdRule) {
+            Stats stats = statsRepository.findStatsByRuleId(productId);
+            stats.incrementCount();
+            statsRepository.save(stats);
             return Optional.of(new BankProduct(productName, productId, productDescription));
         }
         return Optional.empty();

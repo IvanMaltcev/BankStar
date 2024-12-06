@@ -1,13 +1,11 @@
 package pro.sky.bank_star.repository;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-
-import java.util.concurrent.TimeUnit;
+import pro.sky.bank_star.dto.User;
 
 @Repository
 public class BankManagerRepository {
@@ -19,12 +17,8 @@ public class BankManagerRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @Cacheable(value = "isUserOf", key = "#id + #type")
     public boolean isUserOf(String id, String type) {
-        Cache<String[], Boolean> cache = Caffeine.newBuilder()
-                .expireAfterWrite(1, TimeUnit.MINUTES)
-                .maximumSize(100)
-                .build();
-        String[] key = {id, type};
         try {
             Integer result = jdbcTemplate.queryForObject(
                     "SELECT amount " +
@@ -36,19 +30,14 @@ public class BankManagerRepository {
                     Integer.class,
                     id,
                     type);
-            cache.put(key, result != null);
+            return result != null;
         } catch (EmptyResultDataAccessException e) {
-            cache.put(key, false);
+            return false;
         }
-        return cache.getIfPresent(key);
     }
 
+    @Cacheable(value = "isActiveUserOf", key = "#id + #type + #limit")
     public boolean isActiveUserOf(String id, String type, int limit) {
-        Cache<String[], Boolean> cache = Caffeine.newBuilder()
-                .expireAfterWrite(1, TimeUnit.MINUTES)
-                .maximumSize(100)
-                .build();
-        String[] key = {id, type, String.valueOf(limit)};
         try {
             Integer result = jdbcTemplate.queryForObject(
                     "SELECT count(amount) " +
@@ -60,20 +49,16 @@ public class BankManagerRepository {
                     Integer.class,
                     id,
                     type);
-            cache.put(key, result != null && result >= limit);
+            return result != null && result >= limit;
         } catch (EmptyResultDataAccessException e) {
-            cache.put(key, false);
+            return false;
         }
-        return cache.getIfPresent(key);
     }
 
+    @Cacheable(value = "transactionSumCompare", key = "#id + #typeProduct + #typeTransactions + " +
+            "#comparisonType + #number")
     public boolean transactionSumCompare(String id, String typeProduct, String typeTransactions,
                                          String comparisonType, int number) {
-        Cache<String[], Boolean> cache = Caffeine.newBuilder()
-                .expireAfterWrite(1, TimeUnit.MINUTES)
-                .maximumSize(100)
-                .build();
-        String[] key = {id, typeProduct, typeTransactions, comparisonType, String.valueOf(number)};
         try {
             Integer result = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) " +
@@ -91,19 +76,14 @@ public class BankManagerRepository {
                     id,
                     number
             );
-            cache.put(key, result != null);
+            return result != null;
         } catch (EmptyResultDataAccessException e) {
-            cache.put(key, false);
+            return false;
         }
-        return cache.getIfPresent(key);
     }
 
+    @Cacheable(value = "transactionSumCompareDepositWithdraw", key = "#id + #typeProduct + #comparisonType")
     public boolean transactionSumCompareDepositWithdraw(String id, String typeProduct, String comparisonType) {
-        Cache<String[], Boolean> cache = Caffeine.newBuilder()
-                .expireAfterWrite(1, TimeUnit.MINUTES)
-                .maximumSize(100)
-                .build();
-        String[] key = {id, typeProduct, comparisonType};
         try {
             Integer result = jdbcTemplate.queryForObject(
                     "SELECT COUNT(" +
@@ -125,10 +105,30 @@ public class BankManagerRepository {
                     id,
                     typeProduct
             );
-            cache.put(key, result != null);
+            return result != null;
         } catch (EmptyResultDataAccessException e) {
-            cache.put(key, false);
+            return false;
         }
-        return cache.getIfPresent(key);
+    }
+
+    public User getUser(String userName) {
+        try {
+            return jdbcTemplate.queryForObject(
+                    "SELECT * " +
+                            "FROM users u " +
+                            "WHERE u.username = ? ",
+                    (resultSet, rowNum) -> {
+                        User user = new User();
+                        user.setId(resultSet.getString("ID"));
+                        user.setUserName(resultSet.getString("USERNAME"));
+                        user.setFirstName(resultSet.getString("FIRST_NAME"));
+                        user.setLastName(resultSet.getString("LAST_NAME"));
+                        return user;
+                    },
+                    userName
+            );
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 }

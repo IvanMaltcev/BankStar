@@ -4,8 +4,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pro.sky.bank_star.dto.BankProduct;
 import pro.sky.bank_star.model.Rule;
+import pro.sky.bank_star.model.Stats;
 import pro.sky.bank_star.repository.BankManagerRepository;
 import pro.sky.bank_star.repository.RecommendationsRepository;
+import pro.sky.bank_star.repository.StatsRepository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,9 +16,11 @@ import java.util.List;
 public class RecommendationRuleSetDynamic {
 
     @Autowired
-    RecommendationsRepository recommendationsRepository;
+    private RecommendationsRepository recommendationsRepository;
     @Autowired
-    BankManagerRepository bankManagerRepository;
+    private BankManagerRepository bankManagerRepository;
+    @Autowired
+    private StatsRepository statsRepository;
 
     private final int LIMIT_TRANSACTIONS = 5;
 
@@ -25,12 +29,18 @@ public class RecommendationRuleSetDynamic {
         List<BankProduct> bankProducts = new ArrayList<>();
         recommendationsRepository.findAll()
                 .forEach(productData -> {
+                    if (statsRepository.findStatsByRuleId(productData.getProductId()) == null) {
+                        statsRepository.save(new Stats(productData.getProductId(), 0));
+                    }
                     productData.getRules()
                             .forEach(rule -> checkingRules.add(checkRecommendations(id, rule)));
                     if (!checkingRules.contains(false)) {
                         BankProduct bankProduct = new BankProduct(productData.getProductName(),
                                 productData.getProductId(), productData.getProductText());
                         bankProducts.add(bankProduct);
+                        Stats stats = statsRepository.findStatsByRuleId(productData.getProductId());
+                        stats.incrementCount();
+                        statsRepository.save(stats);
                     }
                     checkingRules.clear();
                 });

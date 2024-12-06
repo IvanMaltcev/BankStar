@@ -6,8 +6,10 @@ import pro.sky.bank_star.dto.ProductDataDto;
 import pro.sky.bank_star.dto.RuleDto;
 import pro.sky.bank_star.model.ProductData;
 import pro.sky.bank_star.model.Rule;
+import pro.sky.bank_star.model.Stats;
 import pro.sky.bank_star.repository.RecommendationsRepository;
 import pro.sky.bank_star.repository.RulesRepository;
+import pro.sky.bank_star.repository.StatsRepository;
 import pro.sky.bank_star.utils.MappingUtils;
 
 import java.util.ArrayList;
@@ -22,10 +24,13 @@ public class RecommendationsServiceImp implements RecommendationsService {
     private RulesRepository rulesRepository;
     @Autowired
     private MappingUtils mappingUtils;
+    @Autowired
+    private StatsRepository statsRepository;
 
     @Override
     public ProductDataDto createRecommendationRule(ProductData productData) {
         ProductData saveProductData = recommendationsRepository.save(productData);
+        statsRepository.save(new Stats(productData.getProductId(), 0));
         List<RuleDto> rulesDto = new ArrayList<>();
         productData.getRules()
                 .forEach(rule -> {
@@ -55,5 +60,11 @@ public class RecommendationsServiceImp implements RecommendationsService {
     @Override
     public void deleteRecommendationRule(Long id) {
         recommendationsRepository.deleteById(id);
+        statsRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Stats> getStatsRecommendationRules() {
+        return statsRepository.findAll();
     }
 }

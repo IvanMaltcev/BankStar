@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pro.sky.bank_star.dto.ProductDataDto;
 import pro.sky.bank_star.model.ProductData;
+import pro.sky.bank_star.model.Stats;
 import pro.sky.bank_star.service.RecommendationsService;
 
 import java.util.Collection;
@@ -34,5 +35,10 @@ public class RecommendationsController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/stats")
+    public ResponseEntity<Collection<Stats>> getStatsRecommendationRules() {
+        return ResponseEntity.ok(Collections
+                .unmodifiableCollection(recommendationsService.getStatsRecommendationRules()));
 
+    }
 }

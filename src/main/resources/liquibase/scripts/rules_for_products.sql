@@ -24,3 +24,10 @@ CREATE TABLE rule (
     negate BOOLEAN,
     data_id Integer references product_data (id) ON DELETE CASCADE
 );
+
+-- changeset Imaltcev:4
+CREATE TABLE stats (
+    id SERIAL,
+    rule_id text,
+    count Integer
+);
