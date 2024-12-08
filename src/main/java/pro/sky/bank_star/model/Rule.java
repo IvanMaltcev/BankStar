@@ -80,9 +80,8 @@ public class Rule {
 
     @Override
     public String toString() {
-        return "\"rule\": " +
-                "\"query\":" + query +
-                ", \"arguments\": " + arguments +
-                ", \"negate\": " + negate;
+        return "{\"query\":" + "\"" + query + "\"" +
+                ",\"arguments\":" + arguments +
+                ",\"negate\":" + negate + "}";
     }
 }

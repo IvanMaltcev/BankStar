@@ -90,6 +90,6 @@ public class ProductData {
                 ", \"product_name\": " + productName +
                 ", \"product_id\": " + productId +
                 ", \"product_text\": " + productText +
-                ", \"rule\": " + rules;
+                ", \"rule\":" + rules;
     }
 }
